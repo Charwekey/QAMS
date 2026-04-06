@@ -1,0 +1,24 @@
+RewriteEngine On
+
+# Redirect to HTTPS if available (optional for production)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Prevent directory listing
+Options -Indexes
+
+# Deny access to sensitive files
+<FilesMatch "\.(sql|md|env|log)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to config directory from web
+<IfModule mod_rewrite.c>
+    RewriteRule ^config/ - [F,L]
+    RewriteRule ^database/ - [F,L]
+</IfModule>
+
+# Set PHP upload limits
+php_value upload_max_filesize 10M
+php_value post_max_size 12M
