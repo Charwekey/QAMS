@@ -26,13 +26,14 @@ $submissions = dbFetchAll(
      JOIN departments d ON c.department_id = d.id
      JOIN users u ON s.lecturer_id = u.id
      WHERE d.faculty_id = ? AND s.session_id = ?
+     AND s.status IN ('" . STATUS_PENDING_DEAN . "', '" . STATUS_PENDING_DIRECTOR . "', '" . STATUS_APPROVED . "', '" . STATUS_REVERTED_HOD . "', '" . STATUS_REVERTED_DEAN . "')
      ORDER BY s.updated_at DESC",
     'ii',
     [$facultyId, $sessionId ?: 0]
 );
 
 $totalSubs = count($submissions);
-$pendingDean = count(array_filter($submissions, fn($s) => $s['status'] === STATUS_PENDING_DEAN));
+$pendingDean = count(array_filter($submissions, fn($s) => in_array($s['status'], [STATUS_PENDING_DEAN, STATUS_REVERTED_DEAN])));
 $forwarded = count(array_filter($submissions, fn($s) => in_array($s['status'], [STATUS_PENDING_DIRECTOR, STATUS_APPROVED])));
 
 // Departments in this faculty

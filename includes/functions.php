@@ -222,9 +222,9 @@ function statusLabel($status)
         STATUS_PENDING_DEAN => ['Pending Dean Review', 'badge-pending'],
         STATUS_PENDING_DIRECTOR => ['Pending Director Review', 'badge-pending'],
         STATUS_APPROVED => ['Approved', 'badge-approved'],
-        STATUS_REVERTED_LECTURER => ['Reverted to Lecturer', 'badge-reverted'],
-        STATUS_REVERTED_HOD => ['Reverted to HOD', 'badge-reverted'],
-        STATUS_REVERTED_DEAN => ['Reverted to Dean', 'badge-reverted'],
+        STATUS_REVERTED_LECTURER => ['Reverted back to Lecturer', 'badge-reverted'],
+        STATUS_REVERTED_HOD => ['Reverted back to HOD', 'badge-reverted'],
+        STATUS_REVERTED_DEAN => ['Reverted back to Dean', 'badge-reverted'],
     ];
     $info = $labels[$status] ?? ['Unknown', 'badge-draft'];
     return '<span class="badge ' . $info[1] . '">' . $info[0] . '</span>';

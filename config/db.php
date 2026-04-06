@@ -2,6 +2,7 @@
 /**
  * Database Configuration & Connection
  */
+date_default_timezone_set('Africa/Accra');
 
 // Load .env file
 $envFile = __DIR__ . '/../.env';
@@ -37,6 +38,7 @@ function getDbConnection() {
             die("Database connection failed: " . $conn->connect_error);
         }
         $conn->set_charset("utf8mb4");
+        $conn->query("SET time_zone = '+00:00'");
     }
     return $conn;
 }

@@ -36,9 +36,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $subId) {
              FROM submissions s
              JOIN lecturer_courses lc ON s.lecturer_course_id = lc.id
              JOIN courses c ON lc.course_id = c.id
-             WHERE s.id = ? AND c.department_id = ? AND s.status = ?",
-            'iis',
-            [$subId, $deptId, STATUS_PENDING_HOD]
+             WHERE s.id = ? AND c.department_id = ? AND s.status IN (?, ?)",
+            'iiss',
+            [$subId, $deptId, STATUS_PENDING_HOD, STATUS_REVERTED_HOD]
         );
 
         if (!$check) {
@@ -76,21 +76,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $subId) {
             $success = 'Submission approved and forwarded to Dean!';
         } elseif ($action === 'revert') {
             if (empty($comment)) {
-                $error = 'Please provide a comment explaining the reason for reverting.';
-            } else {
-                dbExecute(
-                    "UPDATE submissions SET status = ?, hod_comment = ?, hod_reviewed_at = NOW(), revert_requested = 0 WHERE id = ?",
-                    'ssi',
-                    [STATUS_REVERTED_LECTURER, $comment, $subId]
-                );
-                createNotification(
-                    $check['lecturer_id'],
-                    'Submission Reverted by HOD',
-                    $check['course_code'] . ' – ' . $check['course_title'] . ' was reverted. Please review and re-submit.',
-                    'lecturer/qams_form.php?lc_id=' . $check['lecturer_course_id']
-                );
-                $success = 'Submission reverted to lecturer.';
+                $comment = 'Reverted by HOD. Please review and update your submission.';
             }
+            dbExecute(
+                "UPDATE submissions SET status = ?, hod_comment = ?, hod_reviewed_at = NOW(), revert_requested = 0 WHERE id = ?",
+                'ssi',
+                [STATUS_REVERTED_LECTURER, $comment, $subId]
+            );
+            createNotification(
+                $check['lecturer_id'],
+                'Submission Reverted by HOD',
+                $check['course_code'] . ' – ' . $check['course_title'] . ' was reverted. Please review and re-submit.',
+                'lecturer/qams_form.php?lc_id=' . $check['lecturer_course_id']
+            );
+            $success = 'Submission reverted back to lecturer.';
         }
     }
 }
@@ -126,7 +125,7 @@ if ($subId) {
         $filesByType[$f['file_type']] = $f;
     }
 
-    $canReview = ($submission['status'] === STATUS_PENDING_HOD);
+    $canReview = in_array($submission['status'], [STATUS_PENDING_HOD, STATUS_REVERTED_HOD]);
     ?>
     <div class="page-content">
         <div class="page-header">
@@ -355,9 +354,10 @@ $types = 'ii';
 $params = [$deptId, $sessionId ?: 0];
 
 if ($filter === 'pending') {
-    $sql .= " AND s.status = ?";
-    $types .= 's';
+    $sql .= " AND s.status IN (?, ?)";
+    $types .= 'ss';
     $params[] = STATUS_PENDING_HOD;
+    $params[] = STATUS_REVERTED_HOD;
 } elseif ($filter === 'approved') {
     $sql .= " AND s.status IN ('" . STATUS_PENDING_DEAN . "','" . STATUS_PENDING_DIRECTOR . "','" . STATUS_APPROVED . "')";
 } elseif ($filter === 'reverted') {

@@ -36,9 +36,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $subId) {
              JOIN lecturer_courses lc ON s.lecturer_course_id = lc.id
              JOIN courses c ON lc.course_id = c.id
              JOIN departments d ON c.department_id = d.id
-             WHERE s.id = ? AND d.faculty_id = ? AND s.status = ?",
-            'iis',
-            [$subId, $facultyId, STATUS_PENDING_DEAN]
+             WHERE s.id = ? AND d.faculty_id = ? AND s.status IN (?, ?)",
+            'iiss',
+            [$subId, $facultyId, STATUS_PENDING_DEAN, STATUS_REVERTED_DEAN]
         );
 
         if (!$check) {
@@ -75,13 +75,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $subId) {
             $success = 'Submission approved and forwarded to Director!';
         } elseif ($action === 'revert') {
             if (empty($comment)) {
-                $error = 'Please provide a comment explaining the reason for reverting.';
-            } else {
-                dbExecute(
-                    "UPDATE submissions SET status = ?, dean_comment = ?, dean_reviewed_at = NOW() WHERE id = ?",
-                    'ssi',
-                    [STATUS_REVERTED_HOD, $comment, $subId]
-                );
+                $comment = 'Reverted by Dean. Please review and update your submission.';
+            }
+            dbExecute(
+                "UPDATE submissions SET status = ?, dean_comment = ?, dean_reviewed_at = NOW() WHERE id = ?",
+                'ssi',
+                [STATUS_REVERTED_HOD, $comment, $subId]
+            );
                 // Notify HOD
                 $hod = dbFetchOne(
                     "SELECT u.id FROM users u JOIN user_type_rel r ON u.id = r.user_id
@@ -93,7 +93,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $subId) {
                         'hod/validate.php?id=' . $subId);
                 }
                 $success = 'Submission reverted to HOD.';
-            }
         }
     }
 }
@@ -125,7 +124,7 @@ if ($subId) {
     $filesByType = [];
     foreach ($files as $f) $filesByType[$f['file_type']] = $f;
 
-    $canReview = ($submission['status'] === STATUS_PENDING_DEAN);
+    $canReview = in_array($submission['status'], [STATUS_PENDING_DEAN, STATUS_REVERTED_DEAN]);
     ?>
     <div class="page-content">
         <div class="page-header">
@@ -200,10 +199,13 @@ if ($subId) {
             <div class="card-body">
                 <?php
                 $fileLabels = [
-                    'attendance'       => ['📋', 'Attendance Sheet'],
-                    'midterm_question' => ['📝', 'Midterm Questions'],
-                    'final_question'   => ['📝', 'Final Questions'],
-                    'course_outline'   => ['📄', 'Course Outline'],
+                    'course_outline' => ['📄', 'Course Outline'],
+                    'attendance' => ['📋', 'Attendance Sheet'],
+                    'assignment' => ['📝', 'Assignment (Sample)'],
+                    'presentation' => ['📊', 'Presentation (Sample)'],
+                    'midterm_question' => ['📝', 'Midterm Exam Questions'],
+                    'final_question' => ['📝', 'Final Exam Questions'],
+                    'course_coverage' => ['📁', 'Course Coverage Evidence'],
                 ];
                 foreach ($fileLabels as $key => $meta):
                     $hasFile = isset($filesByType[$key]);
@@ -278,12 +280,13 @@ $sql = "SELECT s.*, u.full_name as lecturer_name, c.course_code, c.course_title,
         JOIN courses c ON lc.course_id = c.id
         JOIN departments d ON c.department_id = d.id
         JOIN users u ON s.lecturer_id = u.id
-        WHERE d.faculty_id = ? AND s.session_id = ?";
+        WHERE d.faculty_id = ? AND s.session_id = ?
+        AND s.status IN ('" . STATUS_PENDING_DEAN . "', '" . STATUS_PENDING_DIRECTOR . "', '" . STATUS_APPROVED . "', '" . STATUS_REVERTED_HOD . "', '" . STATUS_REVERTED_DEAN . "')";
 $types  = 'ii';
 $params = [$facultyId, $sessionId ?: 0];
 
 if ($filter === 'pending') {
-    $sql .= " AND s.status = ?"; $types .= 's'; $params[] = STATUS_PENDING_DEAN;
+    $sql .= " AND s.status IN (?, ?)"; $types .= 'ss'; $params[] = STATUS_PENDING_DEAN; $params[] = STATUS_REVERTED_DEAN;
 } elseif ($filter === 'approved') {
     $sql .= " AND s.status IN ('" . STATUS_PENDING_DIRECTOR . "','" . STATUS_APPROVED . "')";
 } elseif ($filter === 'reverted') {

@@ -46,12 +46,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $subId) {
             $success = 'Submission approved!';
         } elseif ($action === 'revert') {
             if (empty($comment)) {
-                $error = 'Please provide a comment for reverting.';
-            } else {
-                dbExecute(
-                    "UPDATE submissions SET status = ?, director_comment = ?, director_reviewed_at = NOW() WHERE id = ?",
-                    'ssi', [STATUS_REVERTED_DEAN, $comment, $subId]
-                );
+                $comment = 'Reverted by QA Director. Please review and update your submission.';
+            }
+            dbExecute(
+                "UPDATE submissions SET status = ?, director_comment = ?, director_reviewed_at = NOW() WHERE id = ?",
+                'ssi', [STATUS_REVERTED_DEAN, $comment, $subId]
+            );
                 // Notify Dean
                 $dean = dbFetchOne(
                     "SELECT u.id FROM users u JOIN user_type_rel r ON u.id = r.user_id
@@ -65,7 +65,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $subId) {
                         'dean/validate.php?id=' . $subId);
                 }
                 $success = 'Submission reverted to Dean.';
-            }
         }
     }
 }
@@ -189,8 +188,13 @@ if ($subId) {
             <div class="card-body">
                 <?php
                 $fileLabels = [
-                    'attendance' => ['📋','Attendance'], 'midterm_question' => ['📝','Midterm Questions'],
-                    'final_question' => ['📝','Final Questions'], 'course_outline' => ['📄','Course Outline'],
+                    'course_outline' => ['📄', 'Course Outline'],
+                    'attendance' => ['📋', 'Attendance Sheet'],
+                    'assignment' => ['📝', 'Assignment (Sample)'],
+                    'presentation' => ['📊', 'Presentation (Sample)'],
+                    'midterm_question' => ['📝', 'Midterm Exam Questions'],
+                    'final_question' => ['📝', 'Final Exam Questions'],
+                    'course_coverage' => ['📁', 'Course Coverage Evidence'],
                 ];
                 foreach ($fileLabels as $key => $meta):
                     $hasFile = isset($filesByType[$key]);
@@ -276,7 +280,8 @@ $sql = "SELECT s.*, u.full_name as lecturer_name, c.course_code, c.course_title,
         JOIN departments d ON c.department_id = d.id
         JOIN faculties f ON d.faculty_id = f.id
         JOIN users u ON s.lecturer_id = u.id
-        WHERE s.session_id = ?";
+        WHERE s.session_id = ?
+        AND s.status IN ('" . STATUS_PENDING_DIRECTOR . "', '" . STATUS_APPROVED . "', '" . STATUS_REVERTED_DEAN . "')";
 $types  = 'i';
 $params = [$sessionId ?: 0];
 

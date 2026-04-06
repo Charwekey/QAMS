@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_scope'])) {
     redirect('director/dashboard.php');
 }
 
-$filterClause = "WHERE s.session_id = ?";
+$filterClause = "WHERE s.session_id = ? AND s.status IN ('" . STATUS_PENDING_DIRECTOR . "', '" . STATUS_APPROVED . "', '" . STATUS_REVERTED_DEAN . "')";
 $filterTypes = 'i';
 $filterParams = [$sessionId ?: 0];
 

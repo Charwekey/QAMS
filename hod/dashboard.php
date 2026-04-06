@@ -31,7 +31,7 @@ $submissions = dbFetchAll(
 );
 
 $totalSubs = count($submissions);
-$pendingHod = count(array_filter($submissions, fn($s) => $s['status'] === STATUS_PENDING_HOD));
+$pendingHod = count(array_filter($submissions, fn($s) => in_array($s['status'], [STATUS_PENDING_HOD, STATUS_REVERTED_HOD])));
 $approved = count(array_filter($submissions, fn($s) => in_array($s['status'], [STATUS_PENDING_DEAN, STATUS_PENDING_DIRECTOR, STATUS_APPROVED])));
 $reverted = count(array_filter($submissions, fn($s) => $s['status'] === STATUS_REVERTED_LECTURER));
 ?>
